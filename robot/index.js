@@ -84,6 +84,7 @@ function Ia (){
 
 	var chooseMove = function(grid){
 
+
 		var heapDirectionInLine = function(line){
 			if(estPaire(line)){
 				return tabPossibilite[2];
