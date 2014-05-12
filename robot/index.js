@@ -1,7 +1,7 @@
 /*global $ */
 
 var robots = {
-	speed : 100,
+	speed : 500,
 	inProgress : null,
 	autostart : function(){
 		Event.listen('autoStartGame', function () {
@@ -66,7 +66,7 @@ robots.showPanel();
 
 function Ia (){
 	var self = this;
-	var tabPossibilite=[0,1,3]; //2 vers le bas
+	var tabPossibilite = [0,1,3]; //2 vers le bas
 
 	self.initPanelDebug = function(){
 		$("#panelRobot").append("<div id='debugue'><span>debug:</span><button id='clearDebug'>Clear</button>"+
@@ -76,17 +76,28 @@ function Ia (){
 			$("#debugueList").empty();
 		});
 	};
-	var lastChoose = null;
+
+
 	var afficheDebugue = function(mess){
 		$("#debugueList").append("<div>"+mess+"<div");
 	};
 
-	var chooseSens = function(grid){
+	var chooseMove = function(grid){
 
-		var lineEmpty = function(iLigne){
+		var heapDirectionInLine = function(line){
+			if(estPaire(line)){
+				return tabPossibilite[2];
+			}
+			return tabPossibilite[1];
+		};
+
+		var lineBeforeEmpty = function(iLigne){
+			if(iLigne < 0) {
+				iLigne -=1 ; // si premiere ligne la tester et pas ligne -1
+			}
 			var returnValue = true;
-			$.each(grid,function(iColonne, colonne){
-				if(colonne[iLigne]){
+			$.each(grid, function (iColonne, colonne) {
+				if (colonne[iLigne]) {
 					returnValue = false;
 					return false;
 				}
@@ -105,7 +116,7 @@ function Ia (){
 			return returnValue;
 		};
 
-		var titleLibreCoteGauche = function(iLigne){
+		var titleLibreRight = function(iLigne){
 			var returnValue = false;
 			var titleNull = false;
 			$.each(grid,function(iColonne, colonne){
@@ -115,7 +126,7 @@ function Ia (){
 						return false;
 					}
 				}
-				else {
+				else{
 					titleNull = true;
 				}
 			});
@@ -140,7 +151,7 @@ function Ia (){
 			return returnValue;
 		};
 
-		var titleNearFusion = function(iLigne){
+		var titleFusionInLine = function(iLigne){
 			var returnValue = false;
 			$.each(grid,function(iColonne,colonne){
 				if(colonne[iLigne] && grid.hasOwnProperty(iColonne+1) && grid[iColonne+1][iLigne]){
@@ -154,51 +165,40 @@ function Ia (){
 			return returnValue;
 		};
 
-		var titleDownFusion = function(iLigne){
+		var titleFusionNextLinesAlign = function(iLigne){
 			var returnValue = false;
-			$.each(grid,function(iColonne,colonne){
-				if(colonne[iLigne] && colonne[iLigne+1]){
-
-					if(colonne[iLigne].value === colonne[iLigne+1].value ){
-						returnValue = true;
-						return false;
-					}
+			$.each(grid,function(iCols,cols){
+				if(cols[iLigne]){
+					$.each(cols,function(iTile,tile){
+						if(tile && tile.value === cols[iLigne].value){
+							returnValue = true;
+							return false;
+						}
+					});
 				}
 			});
 			return returnValue;
 		};
 
-		var traiteLigne = function(line){
+		var traiteLine = function(line){
 			
-			if(lineEmpty(line)){
+			if(lineBeforeEmpty(line)){
 				return tabPossibilite[0];
 			}
-			if(lineFull(line)){
-				if(titleNearFusion(line)){
-					return tabPossibilite[2];
-				}
-				if(titleLibreCoteGauche(line)){
-					return tabPossibilite[2];
-				}
-				if(titleLibreEtBlockDansLaColonne(line)) {
-					return tabPossibilite[0];
-				}
-				if(titleDownFusion(line)){
-					return tabPossibilite[0];
-				}
-				return tileFusionPossible(line);
-			}
 			else{
-				if(titleNearFusion(line)){
-					return tabPossibilite[2];
+				if(titleEmptyForHeap(line)){
+					return heapDirectionInLine(line);
 				}
-				if(titleLibreCoteGauche(line)){
+				if(titleFusionNextLinesAlign(line)){
+					return tabPossibilite[0];
+				}
+				if(titleFusionInLine(line)){
+					return heapDirectionInLine(line);
+				}
+				if(titleLibreRight(line)){
 					return tabPossibilite[2];
 				}
 				if(titleLibreEtBlockDansLaColonne(line)) {
-					return tabPossibilite[0];
-				}
-				if(titleDownFusion(line)){
 					return tabPossibilite[0];
 				}
 				return tileFusionPossible(line);
@@ -226,29 +226,20 @@ function Ia (){
 			return false;
 		};
 
-		var returnSens = false;
+		var returnDirection = false;
 		$.each(grid[0], function(iLigne,ligne){
-			var result = traiteLigne(iLigne);
+			var result = traiteLine(iLigne);
 			if(result !== false){
-				returnSens = result;
+				returnDirection = result;
 				return false;
 			}
 		});
-		if(returnSens === false) {
-			if (lastChoose === tabPossibilite[1]) {
-				returnSens = tabPossibilite[2];
-			}
-			else {
-				returnSens = tabPossibilite[1];
-			}//pas le choix
-		}
-		lastChoose = returnSens;
-		return returnSens;
+		return returnDirection;
 	};
 
 	var listenGrid = function() {
 		Event.listen("grid",function(grid){
-			var key = chooseSens(grid);
+			var key = chooseMove(grid);
 				afficheDebugue(key);
 			Event.notify('moveIa',key);
 		});
@@ -258,6 +249,11 @@ function Ia (){
 		Event.notify('getGrid',null);
 //		key = Math.floor((Math.random() * tabPossibilite.length-1) + 1);
 	};
+
 	listenGrid();
+}
+
+function estPaire (nombre) {
+	return (nombre % 2) === 0;
 }
 
