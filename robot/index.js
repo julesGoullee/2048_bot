@@ -92,6 +92,7 @@ function Ia (){
 			return tabPossibilite[1];
 		};
 
+
 		var lineBeforeEmpty = function(iLigne){
 			if(iLigne < 0) {
 				iLigne -=1 ; // si premiere ligne la tester et pas ligne -1
